@@ -518,7 +518,7 @@ module.exports = function(options, repo, params, id, publicUrl, dataResolver) {
 
   var renderOverlay = function(z, x, y, bearing, pitch, w, h, scale,
                                path, query) {
-    if (!path || path.length < 2) {
+    if ((!path || path.length < 2) && !query.marker) {
       return null;
     }
     var precisePx = function(ll, zoom) {
@@ -549,23 +549,64 @@ module.exports = function(options, repo, params, id, publicUrl, dataResolver) {
       // optimized path
       ctx.translate(-center[0] + w / 2, -center[1] + h / 2);
     }
-    var lineWidth = query.width !== undefined ?
-                    parseFloat(query.width) : 1;
-    ctx.lineWidth = lineWidth;
-    ctx.strokeStyle = query.stroke || 'rgba(0,64,255,0.7)';
-    ctx.fillStyle = query.fill || 'rgba(255,255,255,0.4)';
-    ctx.beginPath();
-    path.forEach(function(pair) {
-      var px = precisePx(pair, z);
-      ctx.lineTo(px[0], px[1]);
-    });
-    if (path[0][0] == path[path.length - 1][0] &&
-        path[0][1] == path[path.length - 1][1]) {
-      ctx.closePath();
+    if (path && path.length >= 2) {
+        var lineWidth = query.width !== undefined ?
+                        parseFloat(query.width) : 1;
+        ctx.lineWidth = lineWidth;
+        ctx.strokeStyle = query.stroke || 'rgba(0,64,255,0.7)';
+        ctx.fillStyle = query.fill || 'rgba(255,255,255,0.4)';
+        ctx.beginPath();
+        path.forEach(function(pair) {
+          var px = precisePx(pair, z);
+          ctx.lineTo(px[0], px[1]);
+        });
+        if (path[0][0] == path[path.length - 1][0] &&
+            path[0][1] == path[path.length - 1][1]) {
+          ctx.closePath();
+        }
+        ctx.fill();
+        if (lineWidth > 0) {
+          ctx.stroke();
+        }
     }
-    ctx.fill();
-    if (lineWidth > 0) {
-      ctx.stroke();
+    if (query.marker) {
+        var img = new Canvas.Image;
+        img.onload = function() {
+            var anchor;
+            switch (query.anchor){
+                case 'UR':
+                    anchor = {xoffset: center[0] - img.width, yoffset:center[1] - img.height};
+                    break;
+                case 'UC':
+                    anchor = {xoffset: center[0] - img.width / 2, yoffset:center[1] - img.height};
+                    break;
+                case 'UL':
+                    anchor = {xoffset: center[0] + img.width, yoffset:center[1] - img.height};
+                    break;
+                case 'LR':
+                    anchor = {xoffset: center[0] - img.width, yoffset:center[1] + img.height};
+                    break;
+                case 'LC':
+                    anchor = {xoffset: center[0] - img.width / 2, yoffset:center[1] + img.height};
+                    break;
+                case 'LL':
+                    anchor = {xoffset: center[0] + img.width, yoffset:center[1] + img.height};
+                    break;
+                case 'CR':
+                    anchor = {xoffset: center[0] - img.width, yoffset:center[1] - img.height / 2};
+                    break;
+                case 'CL':
+                    anchor = {xoffset: center[0] + img.width, yoffset:center[1] - img.height / 2};
+                    break;
+                case 'CC':
+                    anchor = {xoffset: center[0] - img.width / 2, yoffset:center[1] - img.height / 2};
+                    break;
+                default:
+                    anchor = {xoffset: center[0] - img.width / 2, yoffset:center[1] - img.height / 2};
+            }
+            ctx.drawImage(img, anchor.xoffset, anchor.yoffset);
+        }
+        img.src = decodeURI(query.marker);
     }
 
     return canvas.toBuffer();
