@@ -22,7 +22,10 @@ RUN apt-get -qq update \
     libxxf86vm-dev \
     xvfb \
     x11-utils \
+    nano \
 && apt-get clean
+
+ADD https://goout.net/images/icons/gmap_marker.png /data
 
 RUN mkdir -p /usr/src/app
 COPY / /usr/src/app
